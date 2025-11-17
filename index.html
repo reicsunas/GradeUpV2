@@ -13,6 +13,8 @@
       font-family: 'Roboto', sans-serif;
     }
   </style>
+  <!-- 3. Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-pink-50">
   <!-- 
@@ -31,8 +33,21 @@
   <!-- 3. JavaScript Aplikasi -->
   <script type="module">
     // ---------------------------------
-    // DATA AWAL (MOCK DATABASE)
+    // INISIALISASI KLIEN SUPABASE
     // ---------------------------------
+    const SUPABASE_URL = 'https://pyzgqpsbofnkcltqpwta.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emdxcHNib2Zua2NsdHFwd3RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MTA5NDYsImV4cCI6MjA3ODQ4Njk0Nn0.HhaP77adou_CpwrmOF1fZdx93Io2tSPHPcLfjEKxyi4';
+
+    // Inisialisasi klien Supabase
+    // (Pastikan variabel 'supabase' tersedia dari CDN)
+    // Kita gunakan 'supabaseClient' agar tidak bentrok dengan namespace 'supabase' global
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+    // ---------------------------------
+    // DATA AWAL (MOCK DATABASE) - DIKOMENTARI
+    // ---------------------------------
+    /*
     const initialSubjects = [
       "Matematika", "Bahasa Indonesia", "Bahasa Inggris", "Fisika", "Kimia", "Biologi", 
       "Sejarah", "Geografi", "Ekonomi", "Sosiologi", "Seni Budaya", "Penjaskes"
@@ -92,15 +107,19 @@
       { id: 'sub2', assignmentId: 't2', studentId: 's2', submittedAt: '2025-11-17T11:00:00', fileUrl: 'https://example.com/jawaban-aulia.pdf', fileName: 'jawaban-aulia.pdf', grade: null, feedback: null },
       { id: 'sub3', assignmentId: 't1', studentId: 's1', submittedAt: '2025-11-19T14:15:00', fileUrl: 'https://example.com/esai-adam.pdf', fileName: 'esai-adam.pdf', grade: null, feedback: null }
     ];
+    */
 
     // ---------------------------------
     // GLOBAL STATE & DATA
     // ---------------------------------
-    let currentUser = null;
-    let users = [...initialUsers];
-    let assignments = [...initialAssignments];
-    let submissions = [...initialSubmissions];
-    const subjects = [...initialSubjects];
+    let currentUser = null; // Ini akan diisi oleh Supabase
+    let userProfile = null; // Ini akan kita ambil dari tabel 'profiles'
+
+    // Variabel ini akan kita isi dengan data dari Supabase, bukan array statis
+    let users = [];
+    let assignments = [];
+    let submissions = [];
+    let subjects = []; // Sebelumnya: const subjects = [...initialSubjects];
 
     let currentView = 'login';
     let selectedAssignmentId = null;

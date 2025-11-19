@@ -4,135 +4,72 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GradeUp LMS</title>
-  <!-- 1. Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 2. Google Font -->
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-    body {
-      font-family: 'Roboto', sans-serif;
-    }
+    body { font-family: 'Roboto', sans-serif; }
   </style>
-  <!-- 3. Supabase JS -->
+  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-pink-50">
-  <!-- 
-    Root container tempat aplikasi akan di-render oleh JavaScript.
-    MainLayout akan dirender di sini, atau LoginPage/RegisterPage.
-  -->
   <div id="app-root"></div>
-
-  <!-- 
-    Modal dan Toast akan ditambahkan di sini secara dinamis
-    agar tidak terpengaruh oleh re-render 'app-root'.
-  -->
   <div id="modal-container"></div>
   <div id="toast-container" class="fixed top-5 right-5 z-50"></div>
 
-  <!-- 3. JavaScript Aplikasi -->
   <script type="module">
-    // ---------------------------------
-    // INISIALISASI KLIEN SUPABASE
-    // ---------------------------------
-    const SUPABASE_URL = 'https://pyzgqpsbofnkcltqpwta.supabase.co';
+    // ==========================================
+    // 1. KONFIGURASI SUPABASE (ISI BAGIAN INI!)
+    // ==========================================
+    // PENTING: Ganti string di bawah ini dengan Project URL dan Anon Key Anda dari Dashboard Supabase
+    const SUPABASE_URL = 'https://pyzgqpsbofnkcltqpwta.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emdxcHNib2Zua2NsdHFwd3RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MTA5NDYsImV4cCI6MjA3ODQ4Njk0Nn0.HhaP77adou_CpwrmOF1fZdx93Io2tSPHPcLfjEKxyi4';
 
-    // Inisialisasi klien Supabase
-    // (Pastikan variabel 'supabase' tersedia dari CDN)
-    // Kita gunakan 'supabaseClient' agar tidak bentrok dengan namespace 'supabase' global
+    // --- PENGAMANAN KONFIGURASI ---
+    if (SUPABASE_URL.includes('GANTI_DENGAN') || !SUPABASE_URL.startsWith('http')) {
+      document.getElementById('app-root').innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+          <div class="bg-white p-8 rounded-xl shadow-xl max-w-lg text-center border-t-4 border-red-500">
+            <h1 class="text-2xl font-bold text-red-600 mb-4">⚠️ Konfigurasi Diperlukan</h1>
+            <p class="text-gray-700 mb-4">Aplikasi belum terhubung ke Supabase. Anda perlu memasukkan <strong>URL Proyek</strong> dan <strong>Anon Key</strong> Anda.</p>
+            <div class="bg-gray-100 p-4 rounded text-left text-sm font-mono mb-4 overflow-x-auto">
+                // Cari bagian ini di kode (baris ~25):<br>
+                const SUPABASE_URL = '...';<br>
+                const SUPABASE_ANON_KEY = '...';
+            </div>
+            <p class="text-sm text-gray-500">Silakan edit file <code>index.html</code> dan masukkan kredensial dari dashboard Supabase Anda.</p>
+            <button onclick="location.reload()" class="mt-6 bg-pink-500 text-white px-6 py-2 rounded hover:bg-pink-600 transition">Muat Ulang Halaman</button>
+          </div>
+        </div>
+      `;
+      throw new Error("Supabase URL belum dikonfigurasi. Silakan edit kode."); 
+    }
+
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-
-    // ---------------------------------
-    // DATA AWAL (MOCK DATABASE) - DIKOMENTARI
-    // ---------------------------------
-    /*
-    const initialSubjects = [
-      "Matematika", "Bahasa Indonesia", "Bahasa Inggris", "Fisika", "Kimia", "Biologi", 
-      "Sejarah", "Geografi", "Ekonomi", "Sosiologi", "Seni Budaya", "Penjaskes"
-    ];
-
-    const initialUsers = [
-      // 1. Admin
-      { id: 'u1', username: 'admin', fullName: 'Admin', password: '123', role: 'admin', class: null, profilePic: 'https://placehold.co/100x100/f8bbd0/333333?text=A' },
-      // 2. Guru
-      { id: 'u2', username: 'Dodi', fullName: 'Dodi', password: '123', role: 'teacher', class: null, profilePic: 'https://placehold.co/100x100/bbdefb/333333?text=D' },
-      // 3. Siswa (Kelas 12 D)
-      { id: 's1', username: 'Adam', fullName: 'Aldebaran Adam Syahputra', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=A' },
-      { id: 's2', username: 'Aulia', fullName: 'Aulia Danish', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=A' },
-      { id: 's3', username: 'Anzilah', fullName: 'Anzilah Nur', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=A' },
-      { id: 's4', username: 'Chairil', fullName: 'Chairil Ahmad Fathir', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=C' },
-      { id: 's5', username: 'Daiva', fullName: 'Daiva Bhagja Wangsapriyatman', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=D' },
-      { id: 's6', username: 'Luna', fullName: 'Dellaluna Nur Agustina', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=D' },
-      { id: 's7', username: 'Denian', fullName: 'Denian Prasetya', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=D' },
-      { id: 's8', username: 'Fadhillah', fullName: 'Fadhillah Nursyifa', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=F' },
-      { id: 's9', username: 'Ghaisan', fullName: 'Ghaisan Rafani', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=G' },
-      { id: 's10', username: 'Hasna', fullName: 'Hasna Fauziah Aqila', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=H' },
-      { id: 's11', username: 'Heni', fullName: 'Heni Ramadhani', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=H' },
-      { id: 's12', username: 'Iyan', fullName: 'Iyan Apriansa', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=I' },
-      { id: 's13', username: 'Keihsa', fullName: 'Keihsa Anindya Danastri Hasan', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=K' },
-      { id: 's14', username: 'Kintan', fullName: 'Kintan Putri Haryono', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=K' },
-      { id: 's15', username: 'Fajri', fullName: 'Muhamad Fajri Bakkah', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=M' },
-      { id: 's16', username: 'Farhan', fullName: 'Muhamad Farhan', password: '123', role: 'student', class: '12 D', profilePic: 'httpsS://placehold.co/100x100/c8e6c9/333333?text=M' },
-      { id: 's17', username: 'Nabil', fullName: 'Muhammad Nabil Fadhlurrohman', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=M' },
-      { id: 's18', username: 'Ridhan', fullName: 'M. Ridhan Fajari', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=M' },
-      { id: 's19', username: 'Rizqy', fullName: 'Muhammad Rizqy Irza Saputra', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=M' },
-      { id: 's20', username: 'Nadia', fullName: 'Nadia Aprianca Putri', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=N' },
-      { id: 's21', username: 'Naisya', fullName: 'Naisya Aufia Indri', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=N' },
-      { id: 's22', username: 'Nasya', fullName: 'Nasya Tri Febriyani', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=N' },
-      { id: 's23', username: 'Naya', fullName: 'Naya Nardiana', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=N' },
-      { id: 's24', username: 'Maya', fullName: 'Nur Maya Aini', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=N' },
-      { id: 's25', username: 'Puspita', fullName: 'Puspita Widia Kusumaningsih', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=P' },
-      { id: 's26', username: 'Puteri', fullName: 'Puteri Rosmayanti', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=P' },
-      { id: 's27', username: 'Rafa', fullName: 'Rafa Yanwardi Azhar', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=R' },
-      { id: 's28', username: 'Raka', fullName: 'Raka Alif Al-aziz', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=R' },
-      { id: 's29', username: 'Resti', fullName: 'Resti Julianti', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=R' },
-      { id: 's30', username: 'Malia', fullName: 'Siti Nurmalia Ramadhan', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=S' },
-      { id: 's31', username: 'Sulthan', fullName: 'Sulthan Fardhan Anggestu', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=S' },
-      { id: 's32', username: 'Ayya', fullName: 'Sumayyah Dema Nazihah', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=S' },
-      { id: 's33', username: 'Syafira', fullName: 'Syafira Ramadhani', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=S' },
-      { id: 's34', username: 'Syakilla', fullName: 'Syakilla Insan Sabria', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=S' },
-      { id: 's35', username: 'Syifa', fullName: 'Syifa Amelia Dalimunthe', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=S' },
-      { id: 's36', username: 'Zahra', fullName: 'Zahra Tunnisa', password: '123', role: 'student', class: '12 D', profilePic: 'https://placehold.co/100x100/c8e6c9/333333?text=Z' },
-    ];
-
-    const initialAssignments = [
-      { id: 't1', title: 'Esai Sejarah Perang Diponegoro', subject: 'Sejarah', deadline: '2025-11-20T23:59', description: 'Tulis esai minimal 500 kata mengenai Perang Diponegoro. Fokus pada penyebab, jalannya perang, dan dampaknya. Sertakan sumber referensi.', fileUrl: null, createdBy: 'u2' },
-      { id: 't2', title: 'Latihan Soal Integral', subject: 'Matematika', deadline: '2025-11-18T23:59', description: 'Kerjakan 10 soal integral terlampir. Tulis tangan di kertas folio dan scan/foto lalu upload dalam format PDF.', fileUrl: 'https://example.com/soal-integral.pdf', createdBy: 'u2' }
-    ];
-
-    const initialSubmissions = [
-      { id: 'sub1', assignmentId: 't2', studentId: 's1', submittedAt: '2025-11-17T10:30:00', fileUrl: 'https://example.com/jawaban-adam.pdf', fileName: 'jawaban-adam.pdf', grade: 90, feedback: 'Kerja bagus, Adam! Perhitungan sudah tepat.' },
-      { id: 'sub2', assignmentId: 't2', studentId: 's2', submittedAt: '2025-11-17T11:00:00', fileUrl: 'https://example.com/jawaban-aulia.pdf', fileName: 'jawaban-aulia.pdf', grade: null, feedback: null },
-      { id: 'sub3', assignmentId: 't1', studentId: 's1', submittedAt: '2025-11-19T14:15:00', fileUrl: 'https://example.com/esai-adam.pdf', fileName: 'esai-adam.pdf', grade: null, feedback: null }
-    ];
-    */
-
-    // ---------------------------------
-    // GLOBAL STATE & DATA
-    // ---------------------------------
-    let currentUser = null; // Ini akan diisi oleh Supabase
-    let userProfile = null; // Ini akan kita ambil dari tabel 'profiles'
-
-    // Variabel ini akan kita isi dengan data dari Supabase, bukan array statis
+    // ==========================================
+    // 2. STATE GLOBAL
+    // ==========================================
+    let currentUser = null;
     let users = [];
     let assignments = [];
     let submissions = [];
-    let subjects = []; // Sebelumnya: const subjects = [...initialSubjects];
-
+    let subjects = [];
+    
     let currentView = 'login';
     let selectedAssignmentId = null;
     let editingUser = null;
     let userToDelete = null;
 
-    // File-file yang di-cache untuk upload
-    let taskAttachmentFile = null;
-    let submissionFile = null;
-    
-    // ---------------------------------
-    // FUNGSI AUTENTIKASI (Simulasi Context)
-    // ---------------------------------
+    // Cache file upload
+    let taskFileName = null;
+    let submissionFileName = null;
+
+    // ==========================================
+    // 3. FUNGSI LOGIKA (Backend)
+    // ==========================================
+
+    // --- LOGIN ---
     const login = (username, password) => {
       const user = users.find(u => u.username === username && u.password === password);
       if (user) {
@@ -147,1327 +84,390 @@
       setView('login');
     };
 
-    const register = (fullName, username, password, role, studentClass) => {
-      if (users.find(u => u.username === username)) {
-        return { success: false, message: 'Username sudah digunakan.' };
+    // --- BUAT TUGAS (GURU) ---
+    const addAssignment = async (title, subject, deadline, description) => {
+      if (!currentUser) return;
+      const deadlineISO = new Date(deadline).toISOString();
+
+      const { data, error } = await supabaseClient
+        .from('assignments')
+        .insert({
+          id: `t${Date.now()}`,
+          title: title,
+          subject: subject,
+          deadline: deadlineISO,
+          description: description,
+          file_url: taskFileName ? `https://fake-link.com/${taskFileName}` : null,
+          created_by: currentUser.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Gagal upload tugas:", error);
+        return { success: false, message: error.message };
       }
-      const newUser = {
-        id: `u${users.length + 1}`,
-        username,
-        fullName,
-        password,
-        role,
-        class: role === 'student' ? studentClass : null,
-        profilePic: `https://placehold.co/100x100/eeeeee/333333?text=${username.charAt(0).toUpperCase()}`
-      };
-      users.push(newUser);
-      currentUser = newUser;
-      return { success: true, user: newUser };
+
+      assignments.unshift(data);
+      return { success: true, assignment: data };
     };
 
-    const changePassword = (userId, oldPassword, newPassword) => {
-      const userIndex = users.findIndex(u => u.id === userId);
-      if (userIndex === -1) return { success: false, message: 'User tidak ditemukan.' };
-      
-      const user = users[userIndex];
-      if (user.password !== oldPassword) return { success: false, message: 'Password lama salah.' };
-      
-      const updatedUser = { ...user, password: newPassword };
-      users[userIndex] = updatedUser;
-      
-      if (currentUser && currentUser.id === userId) {
-        currentUser = updatedUser;
-      }
-      return { success: true, message: 'Password berhasil diganti.' };
-    };
+    // --- KUMPUL TUGAS (SISWA) ---
+    const submitAssignment = async (assignmentId, fileName) => {
+      if (!currentUser) return;
 
-    const adminResetPassword = (userId, newPassword) => {
-      const userIndex = users.findIndex(u => u.id === userId);
-      if (userIndex === -1) return { success: false, message: 'User tidak ditemukan.' };
-      
-      const updatedUser = { ...users[userIndex], password: newPassword };
-      users[userIndex] = updatedUser;
-      return { success: true, message: 'Password user berhasil di-reset.' };
-    };
+      const existingSub = submissions.find(s => s.assignment_id === assignmentId && s.student_id === currentUser.id);
+      const subId = existingSub ? existingSub.id : `sub${Date.now()}`;
 
-    const adminUpdateUser = (userId, newName, newRole, newClass) => {
-      const userIndex = users.findIndex(u => u.id === userId);
-      if (userIndex === -1) return { success: false, message: 'User tidak ditemukan.' };
-      
-      const updatedUser = { 
-        ...users[userIndex], 
-        fullName: newName, 
-        role: newRole,
-        class: newRole === 'student' ? newClass : null
-      };
-      users[userIndex] = updatedUser;
-      return { success: true, message: 'Data user berhasil diupdate.' };
-    };
-    
-    const adminDeleteUser = (userId) => {
-      if (userId === 'u1') {
-          return { success: false, message: 'Tidak dapat menghapus akun admin utama.' };
-      }
-      users = users.filter(u => u.id !== userId);
-      return { success: true, message: 'User berhasil dihapus.' };
-    };
-
-    // ---------------------------------
-    // FUNGSI DATA (Simulasi Context)
-    // ---------------------------------
-    const addAssignment = (title, subject, deadline, description, file) => {
-      const newAssignment = {
-        id: `t${assignments.length + 1}`,
-        title,
-        subject,
-        deadline,
-        description,
-        fileUrl: file ? URL.createObjectURL(file) : null,
-        createdBy: currentUser.id
-      };
-      assignments.unshift(newAssignment); // Tambah di awal array
-      return { success: true, assignment: newAssignment };
-    };
-    
-    const submitAssignment = (assignmentId, file) => {
-      const existingSubmissionIndex = submissions.findIndex(s => s.assignmentId === assignmentId && s.studentId === currentUser.id);
-      
-      const newSubmission = {
-        id: `sub${submissions.length + 1}`,
-        assignmentId,
-        studentId: currentUser.id,
-        submittedAt: new Date().toISOString(),
-        fileUrl: URL.createObjectURL(file),
-        fileName: file.name,
+      const submissionData = {
+        id: subId,
+        assignment_id: assignmentId,
+        student_id: currentUser.id,
+        submitted_at: new Date().toISOString(),
+        file_url: `https://fake-link.com/${fileName}`,
+        file_name: fileName,
         grade: null,
         feedback: null
       };
 
-      if (existingSubmissionIndex > -1) {
-        // Ganti submission lama
-        newSubmission.id = submissions[existingSubmissionIndex].id; // Pakai ID lama
-        submissions[existingSubmissionIndex] = newSubmission;
-      } else {
-        // Submission baru
-        submissions.unshift(newSubmission);
+      // Upsert ke Supabase
+      const { data, error } = await supabaseClient
+        .from('submissions')
+        .upsert(submissionData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Gagal kumpul tugas:", error);
+        return { success: false, message: error.message };
       }
-      return { success: true, submission: newSubmission };
+
+      if (existingSub) {
+        const idx = submissions.indexOf(existingSub);
+        submissions[idx] = data;
+      } else {
+        submissions.unshift(data);
+      }
+      return { success: true, submission: data };
     };
 
-    const gradeSubmission = (submissionId, grade, feedback) => {
-      const subIndex = submissions.findIndex(s => s.id === submissionId);
-      if (subIndex === -1) return { success: false, message: 'Submission tidak ditemukan.' };
+    // --- INPUT NILAI (GURU) ---
+    const gradeSubmission = async (submissionId, grade, feedback) => {
+      const { data, error } = await supabaseClient
+        .from('submissions')
+        .update({ grade: Number(grade), feedback: feedback })
+        .eq('id', submissionId)
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+
+      const idx = submissions.findIndex(s => s.id === submissionId);
+      if (idx !== -1) submissions[idx] = data;
       
-      const updatedSub = { ...submissions[subIndex], grade: Number(grade), feedback };
-      submissions[subIndex] = updatedSub;
       return { success: true };
     };
 
-    const getStudentSubmissions = (studentId) => submissions.filter(s => s.studentId === studentId);
-    const getAssignmentSubmissions = (assignmentId) => submissions.filter(s => s.assignmentId === assignmentId);
-    const findUserById = (userId) => users.find(u => u.id === userId); // Ganti ke state users jika dinamis
+    // --- ADMIN USER MANAGEMENT ---
+    const adminDeleteUser = async (userId) => {
+      if (userId === 'u1') return { success: false, message: 'Admin utama tidak bisa dihapus.' };
+      
+      const { error } = await supabaseClient.from('users').delete().eq('id', userId);
+      if (error) return { success: false, message: error.message };
+      
+      users = users.filter(u => u.id !== userId);
+      return { success: true, message: 'User dihapus.' };
+    };
     
-    // ---------------------------------
-    // FUNGSI HELPERS
-    // ---------------------------------
+    // Helpers Data
+    const getStudentSubmissions = (studentId) => submissions.filter(s => s.student_id === studentId);
+    const getAssignmentSubmissions = (assignmentId) => submissions.filter(s => s.assignment_id === assignmentId);
+    const findUserById = (userId) => users.find(u => u.id === userId);
+    
     function formatDeadline(dateString) {
-      if (!dateString) return "N/A";
+      if (!dateString) return "-";
       const date = new Date(dateString);
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-      return date.toLocaleDateString('id-ID', options);
+      return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
 
     function isOverdue(dateString) {
       return new Date(dateString) < new Date();
     }
-    
-    // ---------------------------------
-    // FUNGSI UI HELPERS (HTML String Generators)
-    // ---------------------------------
-    
-    // Fungsi untuk komponen UI tidak perlu `onClick` string,
-    // kita akan tambahkan event listener secara terpisah
-    
-    const FloralHeaderBg = () => `
-      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="position: absolute; top: 0; left: 0; z-index: 0; opacity: 0.1;">
-        <defs>
-          <pattern id="floral-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-            <path d="M50 0 C77.6 0 100 22.4 100 50 C100 77.6 77.6 100 50 100 C22.4 100 0 77.6 0 50 C0 22.4 22.4 0 50 0 Z" fill="#f8bbd0" opacity="0.2"/>
-            <path d="M50 10 C72.1 10 90 27.9 90 50 C90 72.1 72.1 90 50 90 C27.9 90 10 72.1 10 50 C10 27.9 27.9 10 50 10 Z" fill="#f48fb1" opacity="0.3"/>
-            <circle cx="20" cy="20" r="5" fill="#e91e63" opacity="0.4"/>
-            <circle cx="80" cy="80" r="8" fill="#e91e63" opacity="0.4"/>
-            <circle cx="30" cy="70" r="3" fill="#f06292" opacity="0.4"/>
-            <circle cx="70" cy="30" r="6" fill="#f06292" opacity="0.4"/>
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#floral-pattern)" />
-      </svg>`;
 
+    // ==========================================
+    // 4. KOMPONEN UI (String Templates)
+    // ==========================================
+    // (Komponen UI sama seperti sebelumnya, tidak ada perubahan signifikan di bagian ini)
     const Button = ({ children, onClick, type = 'button', variant = 'primary', className = '' }) => {
-      const baseStyle = 'w-full py-3 px-4 rounded-lg font-semibold shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2';
-      const styles = {
-        primary: 'bg-pink-500 text-white hover:bg-pink-600 focus:ring-pink-500',
-        secondary: 'bg-pink-100 text-pink-700 hover:bg-pink-200 focus:ring-pink-500',
-        danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500'
+      const colors = {
+        primary: 'bg-pink-500 text-white hover:bg-pink-600',
+        secondary: 'bg-pink-100 text-pink-700 hover:bg-pink-200',
+        danger: 'bg-red-500 text-white hover:bg-red-600'
       };
-      return `
-        <button type="${type}" onclick="${onClick}" class="${baseStyle} ${styles[variant]} ${className}">
-          ${children}
-        </button>`;
+      return `<button type="${type}" onclick="${onClick}" class="w-full py-3 px-4 rounded-lg font-semibold shadow-md transition duration-300 ${colors[variant]} ${className}">${children}</button>`;
     };
 
-    const Input = ({ label, id, type = 'text', value = '', required = false, placeholder = '', min = '', max = '' }) => `
+    const Input = ({ label, id, type = 'text', value = '', required = false }) => `
       <div class="mb-4">
-        <label for="${id}" class="block text-sm font-medium text-pink-800 mb-1">${label}</label>
-        <input
-          type="${type}"
-          id="${id}"
-          name="${id}"
-          value="${value}"
-          ${required ? 'required' : ''}
-          ${placeholder ? `placeholder="${placeholder}"` : ''}
-          ${min ? `min="${min}"` : ''}
-          ${max ? `max="${max}"` : ''}
-          class="w-full px-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
-        />
+        <label class="block text-sm font-medium text-pink-800 mb-1">${label}</label>
+        <input type="${type}" id="${id}" value="${value}" ${required ? 'required' : ''} class="w-full px-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400" />
       </div>`;
 
-    const Textarea = ({ label, id, value = '', required = false, placeholder = '', rows = 5 }) => `
+    const Select = ({ label, id, options }) => `
       <div class="mb-4">
-        <label for="${id}" class="block text-sm font-medium text-pink-800 mb-1">${label}</label>
-        <textarea
-          id="${id}"
-          name="${id}"
-          ${required ? 'required' : ''}
-          class="w-full px-4 py-2 border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
-          rows="${rows}"
-          placeholder="${placeholder}"
-        >${value}</textarea>
-      </div>`;
-
-    const Select = ({ label, id, value, options, required = false, onChange = '' }) => `
-      <div class="mb-4">
-        <label for="${id}" class="block text-sm font-medium text-pink-800 mb-1">${label}</label>
-        <select
-          id="${id}"
-          name="${id}"
-          ${onChange ? `onchange="${onChange}"` : ''}
-          ${required ? 'required' : ''}
-          class="w-full px-4 py-2 border border-pink-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
-        >
-          ${options.map(opt => `<option value="${opt.value}" ${opt.value === value ? 'selected' : ''} ${opt.disabled ? 'disabled' : ''}>${opt.label}</option>`).join('')}
+        <label class="block text-sm font-medium text-pink-800 mb-1">${label}</label>
+        <select id="${id}" class="w-full px-4 py-2 border border-pink-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-pink-400">
+          ${options.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
         </select>
       </div>`;
 
-    const Card = ({ children, className = '' }) => `
-      <div class="bg-white rounded-xl shadow-lg overflow-hidden ${className}">
-        ${children}
-      </div>`;
-    
-    const CardHeader = ({ title, children = '' }) => `
-      <div class="p-4 sm:p-6 bg-pink-50 border-b border-pink-100">
-        <div class="flex justify-between items-center">
-          <h3 class="text-xl font-semibold text-pink-800">${title}</h3>
-          <div>${children}</div>
-        </div>
-      </div>`;
+    const Card = (content) => `<div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">${content}</div>`;
+    const Header = (title) => `<div class="p-4 bg-pink-50 border-b border-pink-100"><h3 class="text-xl font-semibold text-pink-800">${title}</h3></div>`;
+    const Content = (body) => `<div class="p-6">${body}</div>`;
 
-    const CardContent = ({ children, className = '' }) => `
-      <div class="p-4 sm:p-6 ${className}">
-        ${children}
-      </div>`;
-      
-    const BackButton = ({ onClick }) => `
-      <button
-        onclick="${onClick}"
-        class="mb-4 inline-flex items-center text-pink-600 hover:text-pink-800 transition-colors"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-        </svg>
-        Kembali
-      </button>`;
+    // ==========================================
+    // 5. RENDER PAGES
+    // ==========================================
 
-    // ---------------------------------
-    // FUNGSI RENDER HALAMAN
-    // ---------------------------------
-    
-    // --- Render Halaman Login ---
     function renderLoginPage() {
       return `
       <div class="flex items-center justify-center min-h-screen bg-pink-50 p-4">
-        ${Card({
-          className: "w-full max-w-md border-t-4 border-pink-400",
-          children: `
-          <div class="p-8">
-            <h2 class="text-3xl font-bold text-center text-pink-800 mb-6">Welcome to GradeUp</h2>
-            <p class="text-center text-gray-500 mb-8">Login untuk melanjutkan</p>
-            
-            <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4" role="alert"></div>
-            
-            <form id="login-form">
-              ${Input({ label: "Username", id: "login-username", required: true })}
-              ${Input({ label: "Password", id: "login-password", type: "password", required: true })}
-              <div class="mt-8">
-                ${Button({ type: "submit", variant: "primary", children: "Login" })}
-              </div>
-            </form>
-            
-            <div class="mt-6 text-center">
-              <p class="text-sm text-gray-600">
-                Belum punya akun? 
-                <button onclick="window.setView('register')" class="font-medium text-pink-600 hover:text-pink-500">
-                  Daftar di sini
-                </button>
-              </p>
-            </div>
-          </div>
-          `
-        })}
-      </div>`;
-    }
-
-    // --- Render Halaman Register ---
-    function renderRegisterPage() {
-      return `
-      <div class="flex items-center justify-center min-h-screen bg-pink-50 p-4">
-        ${Card({
-          className: "w-full max-w-md border-t-4 border-pink-400",
-          children: CardContent({
-            children: `
-            ${BackButton({ onClick: "window.setView('login')" })}
-            <h2 class="text-3xl font-bold text-center text-pink-800 mb-6">Buat Akun Baru</h2>
-            
-            <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4" role="alert"></div>
-            
-            <form id="register-form">
-              ${Input({ label: "Nama Lengkap", id: "reg-fullname", required: true })}
-              ${Input({ label: "Username", id: "reg-username", required: true })}
-              ${Input({ label: "Password", id: "reg-password", type: "password", required: true })}
-              ${Select({
-                label: "Saya mendaftar sebagai...",
-                id: "reg-role",
-                value: "student",
-                onChange: "window.handleRoleChange(event.target.value)",
-                options: [
-                  { value: "student", label: "Siswa" },
-                  { value: "teacher", label: "Guru" }
-                ]
-              })}
-              
-              <div id="student-class-field">
-                ${Input({ label: "Kelas", id: "reg-class", placeholder: "Contoh: 12 D", required: true })}
-              </div>
-              
-              <div class="mt-8">
-                ${Button({ type: "submit", variant: "primary", children: "Daftar" })}
-              </div>
-            </form>
-            `
-          })
-        })}
-      </div>`;
-    }
-
-    // --- Render Layout Utama ---
-    function renderMainLayout(contentHtml) {
-      return `
-      <header class="bg-white shadow-md relative overflow-hidden">
-        ${FloralHeaderBg()}
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div class="flex justify-between items-center h-20">
-            <div class="flex-shrink-0 flex items-center">
-              <span class="text-3xl font-bold text-pink-700" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.1)">
-                🌸 GradeUp
-              </span>
-            </div>
-            
-            <div class="flex items-center">
-              <div class="mr-4 text-right">
-                <div class="font-semibold text-pink-800">${currentUser.fullName}</div>
-                <div class="text-sm text-pink-600 capitalize">
-                  ${currentUser.role} ${currentUser.class ? `(${currentUser.class})` : ''}
-                </div>
-              </div>
-              <img 
-                src="${currentUser.profilePic}" 
-                alt="Profil" 
-                class="h-12 w-12 rounded-full border-2 border-pink-200 object-cover"
-                onerror="this.src='https://placehold.co/100x100/f8bbd0/333333?text=User'"
-              />
-              <button
-                onclick="window.setView('profile')"
-                class="ml-4 p-2 rounded-full text-pink-600 hover:bg-pink-100"
-                title="Profil & Ganti Password"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </button>
-              <button
-                onclick="window.logout()"
-                class="ml-2 p-2 rounded-full text-pink-600 hover:bg-pink-100"
-                title="Logout"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
-            </div>
-          </div>
+        <div class="w-full max-w-md bg-white rounded-xl shadow-lg border-t-4 border-pink-400 p-8">
+          <h2 class="text-3xl font-bold text-center text-pink-800 mb-6">GradeUp</h2>
+          <div id="login-error" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4"></div>
+          <form onsubmit="window.handleLogin(event)">
+            ${Input({ label: "Username", id: "login-username", required: true })}
+            ${Input({ label: "Password", id: "login-password", type: "password", required: true })}
+            <div class="mt-6">${Button({ type: "submit", children: "Login" })}</div>
+          </form>
         </div>
-      </header>
-      
-      <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        ${contentHtml}
-      </main>
-      `;
+      </div>`;
     }
 
-    // --- Render Dashboard Siswa ---
     function renderStudentDashboard() {
       const mySubmissions = getStudentSubmissions(currentUser.id);
-      const submittedAssignmentIds = mySubmissions.map(sub => sub.assignmentId);
+      const doneIds = mySubmissions.map(s => s.assignment_id);
+      const todo = assignments.filter(a => !doneIds.includes(a.id));
+      const done = mySubmissions.map(sub => {
+        const task = assignments.find(a => a.id === sub.assignment_id);
+        return { ...sub, task };
+      }).filter(item => item.task);
 
-      const tasksTodo = assignments
-        .filter(assign => !submittedAssignmentIds.includes(assign.id))
-        .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-        
-      const tasksDone = mySubmissions
-        .map(sub => ({
-          ...sub,
-          assignment: assignments.find(a => a.id === sub.assignmentId)
-        }))
-        .filter(sub => sub.assignment)
-        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-
-      const tasksTodoHtml = tasksTodo.length === 0
-        ? `<p class="text-gray-500">Tidak ada tugas baru. Kerja bagus!</p>`
-        : `<ul class="divide-y divide-pink-100">
-            ${tasksTodo.map(task => `
-              <li class="py-4 flex justify-between items-center">
-                <div>
-                  <button onclick="window.viewTaskDetail('${task.id}')" class="text-lg font-semibold text-pink-700 hover:underline">${task.title}</button>
-                  <p class="text-sm text-gray-600">${task.subject}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-sm font-medium ${isOverdue(task.deadline) ? 'text-red-500' : 'text-gray-700'}">
-                    Deadline: ${formatDeadline(task.deadline)}
-                  </p>
-                  ${isOverdue(task.deadline) ? '<span class="text-xs font-bold text-red-600 uppercase">Terlambat</span>' : ''}
-                </div>
-              </li>
-            `).join('')}
-          </ul>`;
-
-      const tasksDoneHtml = tasksDone.length === 0
-        ? `<p class="text-gray-500">Anda belum mengumpulkan tugas apapun.</p>`
-        : `<ul class="divide-y divide-pink-100">
-            ${tasksDone.map(sub => `
-              <li class="py-4 flex justify-between items-center">
-                <div>
-                  <button onclick="window.viewTaskDetail('${sub.assignmentId}')" class="text-lg font-semibold text-pink-700 hover:underline">${sub.assignment.title}</button>
-                  <p class="text-sm text-gray-600">Dikumpulkan: ${formatDeadline(sub.submittedAt)}</p>
-                </div>
-                <div class="text-right">
-                  ${sub.grade !== null
-                    ? `<span class="text-2xl font-bold text-pink-600">${sub.grade}</span>`
-                    : `<span class="text-sm font-medium text-gray-500 italic">Menunggu Penilaian</span>`
-                  }
-                </div>
-              </li>
-            `).join('')}
-          </ul>`;
-          
-      return `
-      <div>
-        <h1 class="text-3xl font-bold text-pink-800 mb-6">Dashboard Siswa</h1>
-        ${Card({
-          className: "mb-8",
-          children: `
-            ${CardHeader({ title: "Tugas (Belum Dikerjakan)" })}
-            ${CardContent({ children: tasksTodoHtml })}
-          `
-        })}
-        ${Card({
-          children: `
-            ${CardHeader({ title: "Riwayat Pengumpulan" })}
-            ${CardContent({ children: tasksDoneHtml })}
-          `
-        })}
-      </div>`;
-    }
-
-    // --- Render Detail Tugas Siswa ---
-    function renderStudentTaskDetail(assignmentId) {
-      const assignment = assignments.find(a => a.id === assignmentId);
-      if (!assignment) {
-        return `
-          ${BackButton({ onClick: "window.setView('dashboard')" })}
-          <p class="text-red-500">Tugas tidak ditemukan.</p>`;
-      }
-      
-      const mySubmission = getStudentSubmissions(currentUser.id).find(s => s.assignmentId === assignmentId);
-      const deadlineOver = isOverdue(assignment.deadline);
-
-      let submissionHtml = '';
-      if (mySubmission) {
-        // 1. Jika Sudah Mengumpulkan
-        submissionHtml = `
-        <div>
-          <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
-            <p class="font-semibold">Anda telah mengumpulkan tugas ini pada:</p>
-            <p>${formatDeadline(mySubmission.submittedAt)}</p>
-            <p class="mt-2">File: 
-              <a href="${mySubmission.fileUrl}" target="_blank" rel="noopener noreferrer" class="ml-2 font-medium underline">
-                ${mySubmission.fileName}
-              </a>
-            </p>
+      const todoList = todo.length ? todo.map(t => `
+        <li class="py-4 flex justify-between items-center border-b border-pink-100">
+          <div>
+            <button onclick="window.viewTask('${t.id}')" class="text-lg font-bold text-pink-700 hover:underline">${t.title}</button>
+            <p class="text-sm text-gray-600">${t.subject}</p>
           </div>
-          
-          ${mySubmission.grade !== null
-            ? Card({
-                className: "bg-pink-50 border border-pink-200",
-                children: `
-                  ${CardHeader({ title: "Hasil Penilaian" })}
-                  ${CardContent({
-                    children: `
-                      <div class="flex items-center justify-center mb-4">
-                        <span class="text-6xl font-bold text-pink-600">${mySubmission.grade}</span>
-                      </div>
-                      <h5 class="font-semibold text-pink-800 mb-2">Feedback dari Guru:</h5>
-                      <p class="text-gray-700 italic bg-white p-3 rounded-lg">"${mySubmission.feedback || 'Tidak ada feedback tambahan.'}"</p>
-                    `
-                  })}
-                `
-              })
-            : `<p class="text-center text-gray-500 italic">Tugas Anda sedang menunggu penilaian dari guru.</p>`
-          }
-          
-          ${!deadlineOver
-            ? `
-            <form id="submission-form" class="mt-6 p-4 border border-pink-200 rounded-lg bg-pink-50">
-              <label class="block text-sm font-medium text-pink-800 mb-2">
-                Ingin mengganti file? (Batas akhir: ${formatDeadline(assignment.deadline)})
-              </label>
-              <input type="file" id="submission-file" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-100 file:text-pink-700 hover:file:bg-pink-200" />
-              <div id="file-name-display" class="text-sm text-gray-600 mt-2 block"></div>
-              ${Button({ type: "submit", variant: "secondary", className: "w-auto px-6 mt-4", children: "Kirim Ulang" })}
-            </form>`
-            : ''
-          }
-        </div>`;
-      } else {
-        // 2. Jika Belum Mengumpulkan
-        submissionHtml = `
-        <div>
-          ${deadlineOver
-            ? `
-            <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
-              <p class="font-semibold">Deadline tugas ini telah berakhir.</p>
-              <p>Anda tidak dapat mengumpulkan tugas lagi.</p>
-            </div>`
-            : `
-            <form id="submission-form" class="p-4 border border-pink-200 rounded-lg bg-pink-50">
-              <label class="block text-lg font-medium text-pink-800 mb-3">
-                Upload File Jawaban Anda
-              </label>
-              <input type="file" id="submission-file" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-100 file:text-pink-700 hover:file:bg-pink-200" />
-              <p class="text-xs text-gray-500 mt-1 mb-4">Format: PDF, DOCX, JPG, PNG, ZIP, dll.</p>
-              <div id="file-name-display" class="text-sm text-gray-600 my-2 block"></div>
-              ${Button({ type: "submit", variant: "primary", className: "w-auto px-10", children: "Kumpulkan" })}
-            </form>`
-          }
-        </div>`;
-      }
+          <span class="text-sm ${isOverdue(t.deadline) ? 'text-red-500 font-bold' : 'text-gray-600'}">Deadline: ${formatDeadline(t.deadline)}</span>
+        </li>`).join('') : '<p class="text-gray-500 text-center">Tidak ada tugas baru.</p>';
+
+      const doneList = done.length ? done.map(d => `
+        <li class="py-4 flex justify-between items-center border-b border-pink-100">
+          <div>
+            <button onclick="window.viewTask('${d.task.id}')" class="text-lg font-bold text-pink-700 hover:underline">${d.task.title}</button>
+            <p class="text-sm text-gray-600">Dikumpulkan: ${formatDeadline(d.submitted_at)}</p>
+          </div>
+          <span class="text-xl font-bold ${d.grade ? 'text-pink-600' : 'text-gray-400'}">${d.grade ?? 'Dinilai'}</span>
+        </li>`).join('') : '<p class="text-gray-500 text-center">Belum ada riwayat.</p>';
 
       return `
-      <div>
-        ${BackButton({ onClick: "window.setView('dashboard')" })}
-        ${Card({
-          children: `
-            ${CardHeader({
-              title: assignment.title,
-              children: `<span class="text-sm font-medium bg-pink-100 text-pink-700 px-3 py-1 rounded-full">${assignment.subject}</span>`
-            })}
-            ${CardContent({
-              children: `
-                <div class="mb-6 pb-6 border-b border-pink-100">
-                  <h4 class="font-semibold text-pink-800 mb-2">Deskripsi Tugas</h4>
-                  <p class="text-gray-700 whitespace-pre-wrap">${assignment.description}</p>
-                </div>
-                
-                <div class="mb-6">
-                  <h4 class="font-semibold text-pink-800 mb-2">Deadline</h4>
-                  <p class="text-lg font-medium ${deadlineOver ? 'text-red-500' : 'text-gray-700'}">
-                    ${formatDeadline(assignment.deadline)}
-                    ${deadlineOver ? " (Telah Berakhir)" : ""}
-                  </p>
-                </div>
-                
-                ${assignment.fileUrl
-                  ? `
-                  <div class="mb-6">
-                    <h4 class="font-semibold text-pink-800 mb-2">File Pendukung</h4>
-                    <a href="${assignment.fileUrl}" target="_blank" rel="noopener noreferrer" class="text-pink-600 hover:underline flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Unduh file
-                    </a>
-                  </div>`
-                  : ''
-                }
-
-                <hr class="my-8 border-pink-100" />
-                
-                <div>
-                  <h3 class="text-2xl font-semibold text-pink-800 mb-4">Status Pengumpulan</h3>
-                  ${submissionHtml}
-                </div>
-              `
-            })}
-          `
-        })}
+      <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold text-pink-800 mb-6">Halo, ${currentUser.full_name} 👋</h1>
+        ${Card(Header("Tugas Baru") + Content(`<ul>${todoList}</ul>`))}
+        ${Card(Header("Riwayat") + Content(`<ul>${doneList}</ul>`))}
       </div>`;
     }
-    
-    // --- Render Dashboard Guru ---
+
     function renderTeacherDashboard() {
-      const myAssignments = assignments
-        .filter(a => a.createdBy === currentUser.id)
-        .sort((a, b) => new Date(b.deadline) - new Date(a.deadline));
-        
-      const allStudents = users.filter(u => u.role === 'student');
-      const totalStudents = allStudents.length;
+      const myTasks = assignments.filter(a => a.created_by === currentUser.id);
+      const taskRows = myTasks.map(t => {
+        const subCount = submissions.filter(s => s.assignment_id === t.id).length;
+        return `
+        <tr class="border-b border-pink-100 hover:bg-pink-50">
+          <td class="p-3"><button onclick="window.viewTask('${t.id}')" class="font-bold text-pink-700 hover:underline">${t.title}</button></td>
+          <td class="p-3">${t.subject}</td>
+          <td class="p-3">${subCount} Siswa</td>
+        </tr>`;
+      }).join('');
 
-      const stats = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          ${Card({ className: "text-center", children: CardContent({ children: `<p class="text-sm text-gray-500">Total Tugas Dibuat</p><p class="text-4xl font-bold text-pink-600">${myAssignments.length}</p>` }) })}
-          ${Card({ className: "text-center", children: CardContent({ children: `<p class="text-sm text-gray-500">Total Siswa</p><p class="text-4xl font-bold text-pink-600">${totalStudents}</p>` }) })}
-          ${Card({ className: "text-center", children: CardContent({ children: `<p class="text-sm text-gray-500">Total Pengumpulan</p><p class="text-4xl font-bold text-pink-600">${submissions.length}</p>` }) })}
-        </div>`;
-
-      const taskListHtml = myAssignments.length === 0
-        ? `<p class="text-gray-500 text-center py-4">Anda belum membuat tugas apapun.</p>`
-        : `
-        <div class="overflow-x-auto">
-          <table class="w-full text-left">
-            <thead>
-              <tr class="border-b border-pink-200">
-                <th class="p-3 font-semibold text-pink-800">Judul Tugas</th>
-                <th class="p-3 font-semibold text-pink-800">Mata Pelajaran</th>
-                <th class="p-3 font-semibold text-pink-800">Deadline</th>
-                <th class="p-3 font-semibold text-pink-800">Progres</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${myAssignments.map(task => {
-                const submissionCount = submissions.filter(s => s.assignmentId === task.id).length;
-                const progress = totalStudents > 0 ? (submissionCount / totalStudents) * 100 : 0;
-                return `
-                  <tr class="border-b border-pink-100 hover:bg-pink-50">
-                    <td class="p-3">
-                      <button onclick="window.viewTaskDetail('${task.id}')" class="font-medium text-pink-700 hover:underline">
-                        ${task.title}
-                      </button>
-                    </td>
-                    <td class="p-3 text-gray-600">${task.subject}</td>
-                    <td class="p-3 text-gray-600">
-                      ${formatDeadline(task.deadline)}
-                      ${isOverdue(task.deadline) ? '<span class="ml-2 text-xs font-bold text-red-600">BERAKHIR</span>' : ''}
-                    </td>
-                    <td class="p-3">
-                      <div class="flex items-center">
-                        <span class="text-sm text-gray-600 mr-2">${submissionCount}/${totalStudents} Siswa</span>
-                        <div class="w-24 bg-pink-100 rounded-full h-2.5">
-                          <div class="bg-pink-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>`;
-        
       return `
-      <div>
+      <div class="container mx-auto p-6">
         <div class="flex justify-between items-center mb-6">
           <h1 class="text-3xl font-bold text-pink-800">Dashboard Guru</h1>
-          ${Button({ onClick: "window.setView('createTask')", variant: "primary", className: "w-auto px-6", children: "+ Buat Tugas Baru" })}
+          <div class="w-48">${Button({ onClick: "window.setView('createTask')", children: "+ Buat Tugas" })}</div>
         </div>
-        ${stats}
-        ${Card({
-          children: `
-            ${CardHeader({ title: "Manajemen Tugas" })}
-            ${CardContent({ children: taskListHtml })}
-          `
-        })}
+        ${Card(Header("Tugas Saya") + Content(myTasks.length ? `<table class="w-full text-left"><thead><tr class="text-pink-800"><th>Judul</th><th>Mapel</th><th>Pengumpulan</th></tr></thead><tbody>${taskRows}</tbody></table>` : '<p class="text-center text-gray-500">Belum ada tugas.</p>'))}
       </div>`;
     }
 
-    // --- Render Halaman Buat Tugas ---
-    function renderCreateTaskPage() {
-      const subjectOptions = [
-        { value: "", label: "Pilih mata pelajaran", disabled: true },
-        ...subjects.map(sub => ({ value: sub, label: sub }))
-      ];
-      
-      return `
-      <div>
-        ${BackButton({ onClick: "window.setView('dashboard')" })}
-        ${Card({
-          children: `
-            ${CardHeader({ title: "Buat Tugas Baru" })}
-            ${CardContent({
-              children: `
-                <form id="create-task-form" class="space-y-6">
-                  ${Input({ label: "Judul Tugas", id: "task-title", required: true })}
-                  ${Select({
-                    label: "Mata Pelajaran",
-                    id: "task-subject",
-                    value: subjects[0] || "",
-                    options: subjectOptions,
-                    required: true
-                  })}
-                  ${Input({ label: "Deadline", id: "task-deadline", type: "datetime-local", required: true })}
-                  ${Textarea({
-                    label: "Deskripsi Tugas",
-                    id: "task-description",
-                    placeholder: "Jelaskan tugas secara rinci di sini...",
-                    required: true
-                  })}
-                  <div>
-                    <label class="block text-sm font-medium text-pink-800 mb-1">File Pendukung (Opsional)</label>
-                    <input type="file" id="task-file" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-100 file:text-pink-700 hover:file:bg-pink-200" />
-                  </div>
-                  <div class="pt-4 flex justify-end">
-                    ${Button({ type: "submit", variant: "primary", className: "w-auto px-10", children: "Terbitkan Tugas" })}
-                  </div>
-                </form>
-              `
-            })}
-          `
-        })}
-      </div>`;
-    }
-
-    // --- Render Detail Tugas Guru ---
-    function renderTeacherTaskDetail(assignmentId) {
-      const assignment = assignments.find(a => a.id === assignmentId);
-      if (!assignment) {
-        return `
-          ${BackButton({ onClick: "window.setView('dashboard')" })}
-          <p class="text-red-500">Tugas tidak ditemukan.</p>`;
-      }
-      
-      const assignmentSubmissions = getAssignmentSubmissions(assignmentId).map(sub => ({
-        ...sub,
-        student: findUserById(sub.studentId)
-      })).filter(sub => sub.student); // Pastikan student ditemukan
-
-      const allStudents = users.filter(u => u.role === 'student');
-      const submittedStudentIds = assignmentSubmissions.map(s => s.studentId);
-      const pendingStudents = allStudents.filter(s => !submittedStudentIds.includes(s.id));
-
-      const submissionsHtml = assignmentSubmissions.length === 0
-        ? `<p class="text-gray-500 italic">Belum ada siswa yang mengumpulkan.</p>`
-        : `
-        <div class="space-y-6">
-          ${assignmentSubmissions.map(sub => `
-            <div class="p-4 border border-pink-100 rounded-lg bg-pink-50">
-              <div class="flex flex-col md:flex-row justify-between md:items-start gap-4">
-                <div class="flex-1">
-                  <p class="font-semibold text-lg text-pink-800">${sub.student.fullName}</p>
-                  <p class="text-sm text-gray-600">Mengumpulkan: ${formatDeadline(sub.submittedAt)}</p>
-                  <a href="${sub.fileUrl}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex items-center text-pink-600 hover:underline">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Lihat File: ${sub.fileName}
-                  </a>
-                </div>
-                <div class="w-full md:w-1/2 lg:w-1/3">
-                  <form onsubmit="window.handleGradeSubmit(event, '${sub.id}')">
-                    ${Input({
-                      label: "Nilai (0-100)",
-                      id: `grade-${sub.id}`,
-                      type: "number",
-                      min: "0",
-                      max: "100",
-                      value: sub.grade || ''
-                    })}
-                    ${Textarea({
-                      label: "Feedback",
-                      id: `feedback-${sub.id}`,
-                      rows: 2,
-                      value: sub.feedback || '',
-                      placeholder: "Beri komentar..."
-                    })}
-                    ${Button({ type: "submit", variant: "primary", className: "w-auto px-6 py-2 text-sm", children: "Simpan Nilai" })}
-                  </form>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>`;
-        
-      const pendingHtml = pendingStudents.length === 0
-        ? `<p class="text-gray-500 italic">Semua siswa telah mengumpulkan.</p>`
-        : `<ul class="list-disc list-inside text-gray-600">${pendingStudents.map(s => `<li>${s.fullName}</li>`).join('')}</ul>`;
-
-      return `
-      <div>
-        ${BackButton({ onClick: "window.setView('dashboard')" })}
-        
-        ${Card({
-          className: "mb-8",
-          children: `
-            ${CardHeader({
-              title: assignment.title,
-              children: `<span class="text-sm font-medium bg-pink-100 text-pink-700 px-3 py-1 rounded-full">${assignment.subject}</span>`
-            })}
-            ${CardContent({
-              children: `
-                <p class="text-gray-700 mb-4">${assignment.description}</p>
-                <p class="text-sm font-medium text-gray-800">
-                  Deadline: ${formatDeadline(assignment.deadline)}
-                </p>
-              `
-            })}
-          `
-        })}
-        
-        ${Card({
-          children: `
-            ${CardHeader({ title: "Pengumpulan Siswa" })}
-            ${CardContent({
-              children: `
-                <h4 class="text-lg font-semibold text-pink-800 mb-4">Telah Mengumpulkan (${assignmentSubmissions.length})</h4>
-                ${submissionsHtml}
-                <hr class="my-8 border-pink-100" />
-                <h4 class="text-lg font-semibold text-pink-800 mb-4">Belum Mengumpulkan (${pendingStudents.length})</h4>
-                ${pendingHtml}
-              `
-            })}
-          `
-        })}
-      </div>`;
-    }
-
-    // --- Render Halaman Admin ---
     function renderAdminDashboard() {
-      const totalStudents = users.filter(u => u.role === 'student').length;
-      const totalTeachers = users.filter(u => u.role === 'teacher').length;
-      
-      const stats = `
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        ${Card({ className: "text-center", children: CardContent({ children: `<p class="text-sm text-gray-500">Total Siswa</p><p class="text-4xl font-bold text-pink-600">${totalStudents}</p>` }) })}
-        ${Card({ className: "text-center", children: CardContent({ children: `<p class="text-sm text-gray-500">Total Guru</p><p class="text-4xl font-bold text-pink-600">${totalTeachers}</p>` }) })}
-        ${Card({ className: "text-center", children: CardContent({ children: `<p class="text-sm text-gray-500">Total Tugas</p><p class="text-4xl font-bold text-pink-600">${assignments.length}</p>` }) })}
-        ${Card({ className: "text-center", children: CardContent({ children: `<p class="text-sm text-gray-500">Total Pengumpulan</p><p class="text-4xl font-bold text-pink-600">${submissions.length}</p>` }) })}
-      </div>`;
-      
+      const userRows = users.map(u => `
+        <tr class="border-b border-pink-100">
+          <td class="p-3">${u.full_name}</td>
+          <td class="p-3">${u.username}</td>
+          <td class="p-3 capitalize">${u.role}</td>
+          <td class="p-3"><button onclick="window.handleDeleteUser('${u.id}')" class="text-red-500 hover:underline">Hapus</button></td>
+        </tr>`).join('');
+
       return `
-      <div>
+      <div class="container mx-auto p-6">
         <h1 class="text-3xl font-bold text-pink-800 mb-6">Admin Panel</h1>
-        ${stats}
-        ${renderAdminUserManagement()}
+        ${Card(Header("Manajemen User") + Content(`<table class="w-full text-left"><thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Aksi</th></tr></thead><tbody>${userRows}</tbody></table>`))}
       </div>`;
     }
 
-    // --- Render Manajemen User Admin ---
-    function renderAdminUserManagement() {
-      const usersHtml = users.map(user => `
-        <tr class="border-b border-pink-100 hover:bg-pink-50">
-          <td class="p-3 flex items-center">
-            <img 
-              src="${user.profilePic}" 
-              alt="${user.fullName}" 
-              class="h-10 w-10 rounded-full mr-3 object-cover"
-              onerror="this.src='https://placehold.co/100x100/f8bbd0/333333?text=User'"
-            />
-            ${user.fullName}
-          </td>
-          <td class="p-3 text-gray-600">${user.username}</td>
-          <td class="p-3 text-gray-600 capitalize">${user.role}</td>
-          <td class="p-3 text-gray-600">${user.class || '-'}</td>
-          <td class="p-3 text-gray-600">${user.username}@gradeup.com</td>
-          <td class="p-3">
-            <button onclick="window.openEditModal('${user.id}')" class="text-pink-600 hover:underline mr-4">Edit</button>
-            <button onclick="window.openDeleteModal('${user.id}')" class="text-red-500 hover:underline">Hapus</button>
-          </td>
-        </tr>
-      `).join('');
-      
-      return Card({
-        children: `
-          ${CardHeader({ title: "Manajemen Pengguna" })}
-          ${CardContent({
-            children: `
-              <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                  <thead>
-                    <tr class="border-b border-pink-200">
-                      <th class="p-3 font-semibold text-pink-800">Nama Lengkap</th>
-                      <th class="p-3 font-semibold text-pink-800">Username</th>
-                      <th class="p-3 font-semibold text-pink-800">Peran</th>
-                      <th class="p-3 font-semibold text-pink-800">Kelas</th>
-                      <th class="p-3 font-semibold text-pink-800">Email (Info)</th>
-                      <th class="p-3 font-semibold text-pink-800">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${usersHtml}
-                  </tbody>
-                </table>
-              </div>
-            `
-          })}
-        `
-      });
-    }
-
-    // --- Render Halaman Profil ---
-    function renderUserProfilePage() {
+    function renderCreateTask() {
+      if (subjects.length === 0) {
+        return `<div class="container mx-auto p-6 text-center"><h2 class="text-red-600 font-bold">Data Mata Pelajaran Kosong</h2><button onclick="window.setView('dashboard')" class="mt-4 text-pink-600 underline">Kembali</button></div>`;
+      }
+      const subjectOpts = subjects.map(s => ({ value: s, label: s }));
       return `
-      <div>
-        ${BackButton({ onClick: "window.setView('dashboard')" })}
-        ${Card({
-          className: "max-w-lg mx-auto",
-          children: `
-            ${CardHeader({ title: "Profil Saya" })}
-            ${CardContent({
-              children: `
-                <div class="text-center mb-6">
-                  <img 
-                    src="${currentUser.profilePic}" 
-                    alt="Profil" 
-                    class="h-24 w-24 rounded-full border-4 border-pink-200 object-cover mx-auto mb-4"
-                    onerror="this.src='https://placehold.co/100x100/f8bbd0/333333?text=User'"
-                  />
-                  <h2 class="text-2xl font-semibold text-pink-800">${currentUser.fullName}</h2>
-                  <p class="text-gray-600">${currentUser.username}</p>
-                </div>
-                
-                <hr class="my-6 border-pink-100" />
-                
-                <h3 class="text-xl font-semibold text-pink-800 mb-4">Ganti Password</h3>
-                <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4" role="alert"></div>
-                
-                <form id="change-password-form" class="space-y-4">
-                  ${Input({ label: "Password Lama", id: "profile-old-pass", type: "password", required: true })}
-                  ${Input({ label: "Password Baru", id: "profile-new-pass", type: "password", required: true })}
-                  ${Input({ label: "Konfirmasi Password Baru", id: "profile-confirm-pass", type: "password", required: true })}
-                  <div class="pt-4">
-                    ${Button({ type: "submit", variant: "primary", children: "Simpan Perubahan Password" })}
-                  </div>
-                </form>
-              `
-            })}
-          `
-        })}
+      <div class="container mx-auto p-6 max-w-2xl">
+        <button onclick="window.setView('dashboard')" class="mb-4 text-pink-600">← Kembali</button>
+        ${Card(Header("Buat Tugas Baru") + Content(`
+          <form onsubmit="window.handleCreateTask(event)">
+            ${Input({ label: "Judul Tugas", id: "task-title", required: true })}
+            ${Select({ label: "Mata Pelajaran", id: "task-subject", options: subjectOpts })}
+            ${Input({ label: "Deadline", id: "task-deadline", type: "datetime-local", required: true })}
+            <div class="mb-4"><label class="block text-sm font-medium text-pink-800">Deskripsi</label><textarea id="task-desc" rows="4" class="w-full p-2 border border-pink-200 rounded-lg" required></textarea></div>
+            <div class="mb-4"><label class="block text-sm font-medium text-pink-800">File</label><input type="file" onchange="window.taskFileName = this.files[0]?.name" class="block w-full text-sm text-gray-500 mt-1"/></div>
+            ${Button({ type: "submit", children: "Terbitkan" })}
+          </form>
+        `))}
       </div>`;
     }
-    
-    // ---------------------------------
-    // FUNGSI MODAL & TOAST
-    // ---------------------------------
-    
-    function showToast(message) {
-      const toastContainer = document.getElementById('toast-container');
-      const toastId = `toast-${Date.now()}`;
-      const toastEl = document.createElement('div');
-      toastEl.id = toastId;
-      toastEl.className = "bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce";
-      toastEl.innerHTML = message;
-      
-      toastContainer.appendChild(toastEl);
-      
-      setTimeout(() => {
-        const el = document.getElementById(toastId);
-        if (el) {
-          el.remove();
-        }
-      }, 3000);
-    }
-    
-    function showModal(title, contentHtml) {
-      const modalContainer = document.getElementById('modal-container');
-      modalContainer.innerHTML = `
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg m-4">
-          <div class="flex justify-between items-center p-5 border-b border-pink-100">
-            <h3 class="text-lg font-semibold text-pink-800">${title}</h3>
-            <button onclick="window.closeModal()" class="text-pink-400 hover:text-pink-600 text-3xl">&times;</button>
-          </div>
-          <div class="p-5">
-            ${contentHtml}
-          </div>
-        </div>
-      </div>
-      `;
-    }
-    
-    window.closeModal = () => {
-      const modalContainer = document.getElementById('modal-container');
-      modalContainer.innerHTML = '';
-      editingUser = null;
-      userToDelete = null;
-    }
 
-    // ---------------------------------
-    // FUNGSI EVENT HANDLERS
-    // ---------------------------------
-    
-    function attachGlobalListeners() {
-      const appRoot = document.getElementById('app-root');
-      
-      // Hapus listener lama jika ada (untuk mencegah duplikasi)
-      // Ini adalah pendekatan sederhana; event delegation lebih baik
-      // tapi untuk konversi ini, kita re-attach saja.
-      
-      // Halaman Login
-      const loginForm = document.getElementById('login-form');
-      if (loginForm) {
-        loginForm.onsubmit = handleLogin;
-      }
-      
-      // Halaman Register
-      const registerForm = document.getElementById('register-form');
-      if (registerForm) {
-        registerForm.onsubmit = handleRegister;
+    function renderTaskDetail() {
+      const task = assignments.find(a => a.id === selectedAssignmentId);
+      if (!task) return `<div class="p-6">Tugas tidak ditemukan. <button onclick="window.setView('dashboard')">Kembali</button></div>`;
+
+      if (currentUser.role === 'student') {
+        const sub = submissions.find(s => s.assignment_id === task.id && s.student_id === currentUser.id);
+        let statusHtml = sub 
+            ? `<div class="bg-green-50 p-4 rounded-lg border border-green-200"><p class="font-bold text-green-800">✅ Sudah Dikumpulkan</p><p class="text-sm">File: ${sub.file_name}</p>${sub.grade ? `<div class="mt-2 font-bold text-2xl text-pink-600">Nilai: ${sub.grade}</div><p class="italic text-gray-600">"${sub.feedback}"</p>` : '<p class="text-sm italic text-gray-500 mt-1">Menunggu dinilai</p>'}</div>`
+            : `<form onsubmit="window.handleSubmitTask(event)"><label class="block mb-2 font-bold text-pink-800">Upload Jawaban</label><input type="file" required onchange="window.submissionFileName = this.files[0]?.name" class="mb-4 block w-full text-sm"/>${Button({ type: "submit", children: "Kumpulkan Tugas" })}</form>`;
+
+        return `
+        <div class="container mx-auto p-6 max-w-2xl">
+            <button onclick="window.setView('dashboard')" class="mb-4 text-pink-600">← Kembali</button>
+            ${Card(Header(task.title) + Content(`<span class="bg-pink-100 text-pink-800 px-2 py-1 rounded text-xs">${task.subject}</span><p class="my-4 text-gray-700">${task.description}</p><p class="mb-6 text-sm text-gray-500">Deadline: ${formatDeadline(task.deadline)}</p><hr class="my-4 border-pink-100"/>${statusHtml}`))}
+        </div>`;
       }
 
-      // Halaman Buat Tugas
-      const createTaskForm = document.getElementById('create-task-form');
-      if (createTaskForm) {
-        createTaskForm.onsubmit = handleCreateTask;
-        document.getElementById('task-file').onchange = (e) => {
-          taskAttachmentFile = e.target.files[0];
-        };
-      }
-      
-      // Halaman Ganti Password
-      const changePasswordForm = document.getElementById('change-password-form');
-      if (changePasswordForm) {
-        changePasswordForm.onsubmit = handleChangePassword;
-      }
-      
-      // Halaman Detail Tugas (Siswa)
-      const submissionForm = document.getElementById('submission-form');
-      if (submissionForm) {
-        submissionForm.onsubmit = handleSubmitAssignment;
-        const fileInput = document.getElementById('submission-file');
-        fileInput.onchange = (e) => {
-          submissionFile = e.target.files[0];
-          document.getElementById('file-name-display').textContent = submissionFile ? `File dipilih: ${submissionFile.name}` : '';
-        };
-      }
-    }
-    
-    // --- Handlers ---
-    
-    function handleLogin(e) {
-      e.preventDefault();
-      const username = document.getElementById('login-username').value;
-      const password = document.getElementById('login-password').value;
-      const errorDiv = document.getElementById('error-message');
-      
-      const result = login(username, password);
-      if (result.success) {
-        errorDiv.classList.add('hidden');
-        if (currentUser.role === 'admin') {
-          setView('admin');
-        } else {
-          setView('dashboard');
-        }
-      } else {
-        errorDiv.textContent = result.message;
-        errorDiv.classList.remove('hidden');
-      }
-    }
-    
-    function handleRegister(e) {
-      e.preventDefault();
-      const fullName = document.getElementById('reg-fullname').value;
-      const username = document.getElementById('reg-username').value;
-      const password = document.getElementById('reg-password').value;
-      const role = document.getElementById('reg-role').value;
-      const studentClass = document.getElementById('reg-class') ? document.getElementById('reg-class').value : '';
-      const errorDiv = document.getElementById('error-message');
-      
-      const result = register(fullName, username, password, role, studentClass);
-      if (result.success) {
-        errorDiv.classList.add('hidden');
-        // Navigasi otomatis
-        if (currentUser.role === 'admin') {
-          setView('admin');
-        } else {
-          setView('dashboard');
-        }
-      } else {
-        errorDiv.textContent = result.message;
-        errorDiv.classList.remove('hidden');
-      }
-    }
-    
-    window.handleRoleChange = (role) => {
-      const classField = document.getElementById('student-class-field');
-      if (role === 'student') {
-        classField.innerHTML = Input({ label: "Kelas", id: "reg-class", placeholder: "Contoh: 12 D", required: true });
-      } else {
-        classField.innerHTML = '';
-      }
-    }
-    
-    function handleCreateTask(e) {
-      e.preventDefault();
-      const title = document.getElementById('task-title').value;
-      const subject = document.getElementById('task-subject').value;
-      const deadline = document.getElementById('task-deadline').value;
-      const description = document.getElementById('task-description').value;
-      
-      const result = addAssignment(title, subject, deadline, description, taskAttachmentFile);
-      if (result.success) {
-        showToast('Tugas baru berhasil dibuat!');
-        taskAttachmentFile = null; // Reset file
-        setView('dashboard');
-      } else {
-        alert("Gagal membuat tugas."); // Ganti dengan toast/error
-      }
-    }
-    
-    function handleChangePassword(e) {
-      e.preventDefault();
-      const oldPassword = document.getElementById('profile-old-pass').value;
-      const newPassword = document.getElementById('profile-new-pass').value;
-      const confirmPassword = document.getElementById('profile-confirm-pass').value;
-      const errorDiv = document.getElementById('error-message');
+      if (currentUser.role === 'teacher') {
+        const subs = submissions.filter(s => s.assignment_id === task.id);
+        const subList = subs.map(s => {
+            const student = users.find(u => u.id === s.student_id);
+            return `
+            <div class="border-b border-pink-100 p-4 flex justify-between items-start">
+                <div><p class="font-bold text-pink-800">${student ? student.full_name : 'Unknown'}</p><p class="text-xs text-gray-500">File: ${s.file_name}</p></div>
+                <form onsubmit="window.handleGrade(event, '${s.id}')" class="flex gap-2 items-end">
+                    <div><input type="number" id="grade-${s.id}" value="${s.grade || ''}" placeholder="Nilai" class="w-16 p-1 border rounded text-sm" max="100"></div>
+                    <div><input type="text" id="feedback-${s.id}" value="${s.feedback || ''}" placeholder="Feedback" class="w-32 p-1 border rounded text-sm"></div>
+                    <button type="submit" class="bg-pink-500 text-white px-3 py-1 rounded text-sm">Simpan</button>
+                </form>
+            </div>`;
+        }).join('');
 
-      if (newPassword !== confirmPassword) {
-        errorDiv.textContent = 'Password baru dan konfirmasi tidak cocok.';
-        errorDiv.classList.remove('hidden');
-        return;
-      }
-      
-      const result = changePassword(currentUser.id, oldPassword, newPassword);
-      if (result.success) {
-        showToast('Password berhasil diganti!');
-        setView('dashboard');
-      } else {
-        errorDiv.textContent = result.message;
-        errorDiv.classList.remove('hidden');
-      }
-    }
-    
-    function handleSubmitAssignment(e) {
-      e.preventDefault();
-      if (!submissionFile) {
-        alert("Harap pilih file terlebih dahulu.");
-        return;
-      }
-      
-      const result = submitAssignment(selectedAssignmentId, submissionFile);
-      if (result.success) {
-        showToast('Tugas berhasil dikumpulkan!');
-        submissionFile = null;
-        renderApp(); // Re-render halaman detail
-      } else {
-        alert("Gagal mengumpulkan tugas.");
-      }
-    }
-    
-    window.handleGradeSubmit = (e, subId) => {
-      e.preventDefault();
-      const grade = document.getElementById(`grade-${subId}`).value;
-      const feedback = document.getElementById(`feedback-${subId}`).value;
-      
-      const result = gradeSubmission(subId, grade, feedback);
-      if (result.success) {
-        showToast('Nilai berhasil disimpan!');
-        renderApp(); // Re-render
-      } else {
-        alert("Gagal menyimpan nilai.");
-      }
-    }
-    
-    window.openEditModal = (userId) => {
-      editingUser = users.find(u => u.id === userId);
-      if (!editingUser) return;
-      
-      const roleOptions = [
-        { value: "student", label: "Siswa" },
-        { value: "teacher", label: "Guru" },
-        { value: "admin", label: "Admin" }
-      ];
-      
-      const content = `
-        <form id="admin-edit-form" onsubmit="window.handleAdminUpdateUser(event)">
-          ${Input({ label: "Nama Lengkap", id: "admin-edit-name", value: editingUser.fullName, required: true })}
-          ${Select({
-            label: "Peran",
-            id: "admin-edit-role",
-            value: editingUser.role,
-            options: roleOptions,
-            onChange: "window.handleAdminRoleChange(event.target.value)"
-          })}
-          <div id="admin-class-field">
-            ${editingUser.role === 'student' ? Input({ label: "Kelas", id: "admin-edit-class", value: editingUser.class || '', placeholder: "Contoh: 12 D" }) : ''}
-          </div>
-          ${Button({ type: "submit", variant: "primary", children: "Simpan Perubahan" })}
-        </form>
-        <hr class="my-6 border-pink-100" />
-        <h4 class="text-lg font-semibold text-pink-800 mb-2">Reset Password</h4>
-        <div class="flex space-x-2">
-          ${Input({ label: "Password Baru", id: "admin-reset-pass", type: "text", placeholder: "Masukkan password baru..." })}
-          ${Button({ onClick: "window.handleAdminResetPassword()", variant: "secondary", className: "w-auto px-6 self-end py-2", children: "Reset" })}
-        </div>
-      `;
-      showModal(`Edit Pengguna: ${editingUser.fullName}`, content);
-    }
-    
-    window.handleAdminRoleChange = (role) => {
-      const classField = document.getElementById('admin-class-field');
-      if (role === 'student') {
-        classField.innerHTML = Input({ label: "Kelas", id: "admin-edit-class", value: editingUser.class || '', placeholder: "Contoh: 12 D" });
-      } else {
-        classField.innerHTML = '';
+        return `<div class="container mx-auto p-6"><button onclick="window.setView('dashboard')" class="mb-4 text-pink-600">← Kembali</button>${Card(Header(`Pengumpulan: ${task.title}`) + Content(subs.length ? subList : '<p class="text-gray-500">Belum ada yang mengumpulkan.</p>'))}</div>`;
       }
     }
 
-    window.handleAdminUpdateUser = (e) => {
+    // ==========================================
+    // 6. GLOBAL HANDLERS
+    // ==========================================
+    window.setView = (view) => { currentView = view; renderApp(); };
+    window.viewTask = (id) => { selectedAssignmentId = id; setView('taskDetail'); };
+    
+    window.handleLogin = (e) => {
       e.preventDefault();
-      const name = document.getElementById('admin-edit-name').value;
-      const role = document.getElementById('admin-edit-role').value;
-      const studentClass = document.getElementById('admin-edit-class') ? document.getElementById('admin-edit-class').value : '';
-      
-      const result = adminUpdateUser(editingUser.id, name, role, studentClass);
-      alert(result.message); // Ganti toast
-      if (result.success) {
-        closeModal();
-        renderApp();
-      }
-    }
-    
-    window.handleAdminResetPassword = () => {
-      const newPassword = document.getElementById('admin-reset-pass').value;
-      if (!newPassword) {
-        alert("Masukkan password baru.");
-        return;
-      }
-      if (confirm(`Yakin ingin reset password untuk ${editingUser.fullName}?`)) {
-        const result = adminResetPassword(editingUser.id, newPassword);
-        alert(result.message); // Ganti toast
-        if (result.success) {
-          document.getElementById('admin-reset-pass').value = '';
-        }
-      }
-    }
-    
-    window.openDeleteModal = (userId) => {
-      userToDelete = users.find(u => u.id === userId);
-      if (!userToDelete) return;
-      
-      const content = `
-        <p class="text-gray-700">
-          Anda yakin ingin menghapus pengguna: <strong class="text-pink-800">${userToDelete.fullName}</strong> (${userToDelete.username})?
-        </p>
-        <p class="text-sm text-red-600 mt-2">Tindakan ini tidak dapat dibatalkan.</p>
-        <div class="flex justify-end space-x-4 mt-6">
-          ${Button({ onClick: "window.closeModal()", variant: "secondary", className: "w-auto px-6", children: "Batal" })}
-          ${Button({ onClick: "window.handleAdminDeleteUser()", variant: "danger", className: "w-auto px-6", children: "Ya, Hapus" })}
-        </div>
-      `;
-      showModal("Konfirmasi Hapus", content);
-    }
-    
-    window.handleAdminDeleteUser = () => {
-      const result = adminDeleteUser(userToDelete.id);
-      alert(result.message); // Ganti toast
-      closeModal();
-      renderApp();
-    }
-    
-    // ---------------------------------
-    // FUNGSI INTI APP
-    // ---------------------------------
-    
-    // Navigasi
-    window.setView = (newView) => {
-      currentView = newView;
-      if (newView === 'dashboard') {
-        selectedAssignmentId = null;
-      }
-      renderApp();
-    }
-    
-    window.viewTaskDetail = (id) => {
-      selectedAssignmentId = id;
-      setView('taskDetail');
-    }
-    
-    // Global logout
-    window.logout = logout;
+      const res = login(document.getElementById('login-username').value, document.getElementById('login-password').value);
+      if (!res.success) {
+        document.getElementById('login-error').innerText = res.message;
+        document.getElementById('login-error').classList.remove('hidden');
+      } else setView('dashboard');
+    };
 
-    // Render utama
+    window.handleCreateTask = async (e) => {
+      e.preventDefault();
+      const res = await addAssignment(
+        document.getElementById('task-title').value, 
+        document.getElementById('task-subject').value, 
+        document.getElementById('task-deadline').value, 
+        document.getElementById('task-desc').value
+      );
+      if (res.success) { alert('Tugas berhasil dibuat!'); setView('dashboard'); }
+      else alert('Gagal: ' + res.message);
+    };
+
+    window.handleSubmitTask = async (e) => {
+        e.preventDefault();
+        if(!window.submissionFileName) return alert("Pilih file dulu");
+        const res = await submitAssignment(selectedAssignmentId, window.submissionFileName);
+        if(res.success) { alert("Terkirim!"); renderApp(); }
+        else alert("Gagal: " + res.message); // MENAMPILKAN PESAN ERROR DARI SUPABASE
+    };
+
+    window.handleGrade = async (e, subId) => {
+        e.preventDefault();
+        const res = await gradeSubmission(
+            subId, 
+            document.getElementById(`grade-${subId}`).value, 
+            document.getElementById(`feedback-${subId}`).value
+        );
+        if(res.success) alert("Dinilai!");
+        else alert("Gagal: " + res.message);
+    };
+
+    window.handleDeleteUser = async (id) => {
+        if(confirm("Hapus user ini?")) { await adminDeleteUser(id); renderApp(); }
+    };
+    window.logout = () => { currentUser = null; setView('login'); }
+
+    // ==========================================
+    // 7. INITIALIZATION & RENDER
+    // ==========================================
     function renderApp() {
-      const appRoot = document.getElementById('app-root');
-      let html = '';
-
-      if (!currentUser) {
-        if (currentView === 'register') {
-          html = renderRegisterPage();
-        } else {
-          html = renderLoginPage();
-        }
-        appRoot.className = ""; // Hapus class layout
-      } else {
-        appRoot.className = "min-h-screen bg-pink-50 font-roboto"; // Tambah class layout
-        let contentHtml = '';
-        let viewToRender = currentView;
-
-        // Logika routing otomatis
-        if (currentView === 'login' || currentView === 'register') {
-          viewToRender = currentUser.role === 'admin' ? 'admin' : 'dashboard';
-          currentView = viewToRender;
-        }
-
-        switch (viewToRender) {
-          case 'dashboard':
-            if (currentUser.role === 'student') contentHtml = renderStudentDashboard();
-            else if (currentUser.role === 'teacher') contentHtml = renderTeacherDashboard();
-            else contentHtml = renderAdminDashboard(); // Admin dashboard
-            break;
-          case 'taskDetail':
-            if (currentUser.role === 'student') contentHtml = renderStudentTaskDetail(selectedAssignmentId);
-            else contentHtml = renderTeacherTaskDetail(selectedAssignmentId); // Guru detail
-            break;
-          case 'createTask':
-            contentHtml = renderCreateTaskPage();
-            break;
-          case 'profile':
-            contentHtml = renderUserProfilePage();
-            break;
-          case 'admin':
-            contentHtml = renderAdminDashboard();
-            break;
-          default:
-            contentHtml = `<div>Halaman tidak ditemukan</div>`;
-        }
-        html = renderMainLayout(contentHtml);
-      }
+      const root = document.getElementById('app-root');
+      if (!currentUser) { root.innerHTML = renderLoginPage(); return; }
       
-      appRoot.innerHTML = html;
-      
-      // Setelah render, pasang kembali event listener
-      attachGlobalListeners();
+      const navbar = `<nav class="bg-white shadow px-6 py-4 flex justify-between items-center mb-6"><span class="text-xl font-bold text-pink-600">🌸 GradeUp</span><div class="flex items-center gap-4"><div class="text-right"><div class="font-bold text-gray-800">${currentUser.full_name}</div><div class="text-xs text-gray-500 uppercase">${currentUser.role}</div></div><button onclick="window.logout()" class="text-red-500 text-sm">Logout</button></div></nav>`;
+
+      let content = '';
+      if (currentView === 'dashboard') {
+         if (currentUser.role === 'student') content = renderStudentDashboard();
+         else if (currentUser.role === 'teacher') content = renderTeacherDashboard();
+         else if (currentUser.role === 'admin') content = renderAdminDashboard();
+      } else if (currentView === 'createTask') content = renderCreateTask();
+      else if (currentView === 'taskDetail') content = renderTaskDetail();
+
+      root.innerHTML = navbar + content;
     }
-    
-    // Render aplikasi saat pertama kali load
-    renderApp();
 
+    async function init() {
+      document.getElementById('app-root').innerHTML = '<div class="p-10 text-center text-gray-500">Sedang memuat data database...</div>';
+      const { data: usersData } = await supabaseClient.from('users').select('*');
+      const { data: subData } = await supabaseClient.from('subjects').select('*');
+      const { data: assData } = await supabaseClient.from('assignments').select('*');
+      const { data: submissionData } = await supabaseClient.from('submissions').select('*');
+
+      if (!usersData) { // Sederhana: jika users null, anggap error koneksi/policy
+        document.getElementById('app-root').innerHTML = `<div class="p-10 text-center text-red-600"><h1 class="text-2xl font-bold">Gagal Memuat Database</h1><p class="mt-2">Pastikan RLS Policy sudah diatur!</p></div>`;
+        return;
+      }
+
+      users = usersData || [];
+      subjects = subData ? subData.map(s => s.name) : [];
+      assignments = assData || [];
+      submissions = submissionData || [];
+      
+      renderApp();
+    }
+
+    init();
   </script>
 </body>
 </html>

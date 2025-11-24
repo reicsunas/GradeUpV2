@@ -14,14 +14,26 @@
 </head>
 <body class="bg-pink-50">
   <div id="app-root"></div>
-  <div id="modal-container"></div>
+  
+  <!-- MODAL FOTO -->
+  <div id="photo-modal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center p-4" onclick="window.closePhoto()">
+    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col relative" onclick="event.stopPropagation()">
+      <div class="p-4 border-b flex justify-between items-center bg-pink-50">
+        <h3 id="modal-title" class="font-bold text-pink-800">Foto Jawaban</h3>
+        <button onclick="window.closePhoto()" class="text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
+      </div>
+      <div class="p-4 bg-gray-100 overflow-auto flex justify-center items-center flex-1">
+        <img id="modal-img" src="" alt="Jawaban Siswa" class="max-w-full h-auto shadow-lg border border-white rounded"/>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="fixed top-5 right-5 z-50"></div>
 
   <script type="module">
     // ==========================================
-    // 1. KONFIGURASI SUPABASE (ISI BAGIAN INI!)
+    // 1. KONFIGURASI SUPABASE
     // ==========================================
-    // PENTING: Ganti string di bawah ini dengan Project URL dan Anon Key Anda dari Dashboard Supabase
     const SUPABASE_URL = 'https://pyzgqpsbofnkcltqpwta.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emdxcHNib2Zua2NsdHFwd3RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MTA5NDYsImV4cCI6MjA3ODQ4Njk0Nn0.HhaP77adou_CpwrmOF1fZdx93Io2tSPHPcLfjEKxyi4';
 
@@ -31,18 +43,12 @@
         <div class="min-h-screen flex items-center justify-center p-4">
           <div class="bg-white p-8 rounded-xl shadow-xl max-w-lg text-center border-t-4 border-red-500">
             <h1 class="text-2xl font-bold text-red-600 mb-4">⚠️ Konfigurasi Diperlukan</h1>
-            <p class="text-gray-700 mb-4">Aplikasi belum terhubung ke Supabase. Anda perlu memasukkan <strong>URL Proyek</strong> dan <strong>Anon Key</strong> Anda.</p>
-            <div class="bg-gray-100 p-4 rounded text-left text-sm font-mono mb-4 overflow-x-auto">
-                // Cari bagian ini di kode (baris ~25):<br>
-                const SUPABASE_URL = '...';<br>
-                const SUPABASE_ANON_KEY = '...';
-            </div>
-            <p class="text-sm text-gray-500">Silakan edit file <code>index.html</code> dan masukkan kredensial dari dashboard Supabase Anda.</p>
+            <p class="text-gray-700 mb-4">Aplikasi belum terhubung ke Supabase. Silakan cek konfigurasi URL dan Key.</p>
             <button onclick="location.reload()" class="mt-6 bg-pink-500 text-white px-6 py-2 rounded hover:bg-pink-600 transition">Muat Ulang Halaman</button>
           </div>
         </div>
       `;
-      throw new Error("Supabase URL belum dikonfigurasi. Silakan edit kode."); 
+      throw new Error("Supabase URL belum dikonfigurasi."); 
     }
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -58,12 +64,6 @@
     
     let currentView = 'login';
     let selectedAssignmentId = null;
-    let editingUser = null;
-    let userToDelete = null;
-
-    // Cache file upload
-    let taskFileName = null;
-    let submissionFileName = null;
 
     // ==========================================
     // 3. FUNGSI LOGIKA (Backend)
@@ -97,7 +97,6 @@
           subject: subject,
           deadline: deadlineISO,
           description: description,
-          file_url: taskFileName ? `https://fake-link.com/${taskFileName}` : null,
           created_by: currentUser.id
         })
         .select()
@@ -112,8 +111,8 @@
       return { success: true, assignment: data };
     };
 
-    // --- KUMPUL TUGAS (SISWA) ---
-    const submitAssignment = async (assignmentId, fileName) => {
+    // --- KUMPUL TUGAS (SISWA) - UPDATE BASE64 ---
+    const submitAssignment = async (assignmentId, fileName, fileBase64) => {
       if (!currentUser) return;
 
       const existingSub = submissions.find(s => s.assignment_id === assignmentId && s.student_id === currentUser.id);
@@ -124,7 +123,7 @@
         assignment_id: assignmentId,
         student_id: currentUser.id,
         submitted_at: new Date().toISOString(),
-        file_url: `https://fake-link.com/${fileName}`,
+        file_url: fileBase64, // SIMPAN DATA GAMBAR ASLI (BASE64)
         file_name: fileName,
         grade: null,
         feedback: null
@@ -197,9 +196,8 @@
     }
 
     // ==========================================
-    // 4. KOMPONEN UI (String Templates)
+    // 4. KOMPONEN UI
     // ==========================================
-    // (Komponen UI sama seperti sebelumnya, tidak ada perubahan signifikan di bagian ini)
     const Button = ({ children, onClick, type = 'button', variant = 'primary', className = '' }) => {
       const colors = {
         primary: 'bg-pink-500 text-white hover:bg-pink-600',
@@ -333,7 +331,6 @@
             ${Select({ label: "Mata Pelajaran", id: "task-subject", options: subjectOpts })}
             ${Input({ label: "Deadline", id: "task-deadline", type: "datetime-local", required: true })}
             <div class="mb-4"><label class="block text-sm font-medium text-pink-800">Deskripsi</label><textarea id="task-desc" rows="4" class="w-full p-2 border border-pink-200 rounded-lg" required></textarea></div>
-            <div class="mb-4"><label class="block text-sm font-medium text-pink-800">File</label><input type="file" onchange="window.taskFileName = this.files[0]?.name" class="block w-full text-sm text-gray-500 mt-1"/></div>
             ${Button({ type: "submit", children: "Terbitkan" })}
           </form>
         `))}
@@ -348,7 +345,11 @@
         const sub = submissions.find(s => s.assignment_id === task.id && s.student_id === currentUser.id);
         let statusHtml = sub 
             ? `<div class="bg-green-50 p-4 rounded-lg border border-green-200"><p class="font-bold text-green-800">✅ Sudah Dikumpulkan</p><p class="text-sm">File: ${sub.file_name}</p>${sub.grade ? `<div class="mt-2 font-bold text-2xl text-pink-600">Nilai: ${sub.grade}</div><p class="italic text-gray-600">"${sub.feedback}"</p>` : '<p class="text-sm italic text-gray-500 mt-1">Menunggu dinilai</p>'}</div>`
-            : `<form onsubmit="window.handleSubmitTask(event)"><label class="block mb-2 font-bold text-pink-800">Upload Jawaban</label><input type="file" required onchange="window.submissionFileName = this.files[0]?.name" class="mb-4 block w-full text-sm"/>${Button({ type: "submit", children: "Kumpulkan Tugas" })}</form>`;
+            : `<form onsubmit="window.handleSubmitTask(event)">
+                 <label class="block mb-2 font-bold text-pink-800">Upload Foto Jawaban</label>
+                 <input type="file" id="file-upload" accept="image/*" required class="mb-4 block w-full text-sm"/>
+                 ${Button({ type: "submit", children: "Kumpulkan Tugas" })}
+               </form>`;
 
         return `
         <div class="container mx-auto p-6 max-w-2xl">
@@ -363,7 +364,13 @@
             const student = users.find(u => u.id === s.student_id);
             return `
             <div class="border-b border-pink-100 p-4 flex justify-between items-start">
-                <div><p class="font-bold text-pink-800">${student ? student.full_name : 'Unknown'}</p><p class="text-xs text-gray-500">File: ${s.file_name}</p></div>
+                <div>
+                  <p class="font-bold text-pink-800">${student ? student.full_name : 'Unknown'}</p>
+                  <p class="text-xs text-gray-500 mb-1">File: ${s.file_name}</p>
+                  <button onclick="window.viewPhoto('${s.id}')" class="text-pink-600 text-xs hover:underline flex items-center gap-1 font-bold">
+                    👁️ Lihat Foto Asli
+                  </button>
+                </div>
                 <form onsubmit="window.handleGrade(event, '${s.id}')" class="flex gap-2 items-end">
                     <div><input type="number" id="grade-${s.id}" value="${s.grade || ''}" placeholder="Nilai" class="w-16 p-1 border rounded text-sm" max="100"></div>
                     <div><input type="text" id="feedback-${s.id}" value="${s.feedback || ''}" placeholder="Feedback" class="w-32 p-1 border rounded text-sm"></div>
@@ -382,6 +389,31 @@
     window.setView = (view) => { currentView = view; renderApp(); };
     window.viewTask = (id) => { selectedAssignmentId = id; setView('taskDetail'); };
     
+    // --- PHOTO MODAL HANDLER (UPDATED) ---
+    window.viewPhoto = (submissionId) => {
+      const sub = submissions.find(s => s.id === submissionId);
+      if (!sub) return alert("Data tidak ditemukan");
+      
+      const student = users.find(u => u.id === sub.student_id);
+      const studentName = student ? student.full_name : 'Siswa';
+      
+      const modal = document.getElementById('photo-modal');
+      const img = document.getElementById('modal-img');
+      const title = document.getElementById('modal-title');
+      
+      // Gunakan URL asli (Base64) jika ada, jika tidak (data lama) pakai placeholder
+      img.src = sub.file_url && sub.file_url.startsWith('data:') 
+        ? sub.file_url 
+        : `https://placehold.co/600x800?text=Jawaban+${studentName.replace(/ /g, '+')}`;
+      
+      title.innerText = `Foto Jawaban: ${studentName}`;
+      modal.classList.remove('hidden');
+    };
+
+    window.closePhoto = () => {
+      document.getElementById('photo-modal').classList.add('hidden');
+    };
+
     window.handleLogin = (e) => {
       e.preventDefault();
       const res = login(document.getElementById('login-username').value, document.getElementById('login-password').value);
@@ -403,12 +435,26 @@
       else alert('Gagal: ' + res.message);
     };
 
+    // --- SUBMIT TASK HANDLER (UPDATED BASE64) ---
     window.handleSubmitTask = async (e) => {
         e.preventDefault();
-        if(!window.submissionFileName) return alert("Pilih file dulu");
-        const res = await submitAssignment(selectedAssignmentId, window.submissionFileName);
-        if(res.success) { alert("Terkirim!"); renderApp(); }
-        else alert("Gagal: " + res.message); // MENAMPILKAN PESAN ERROR DARI SUPABASE
+        const fileInput = document.getElementById('file-upload');
+        const file = fileInput.files[0];
+        
+        if (!file) return alert("Pilih file foto dulu");
+        
+        // Baca file sebagai Base64
+        const reader = new FileReader();
+        reader.onload = async function(evt) {
+            const base64Url = evt.target.result;
+            const res = await submitAssignment(selectedAssignmentId, file.name, base64Url);
+            if(res.success) { alert("Terkirim!"); renderApp(); }
+            else alert("Gagal: " + res.message);
+        };
+        reader.onerror = function() {
+            alert("Gagal membaca file");
+        };
+        reader.readAsDataURL(file);
     };
 
     window.handleGrade = async (e, subId) => {
@@ -454,7 +500,7 @@
       const { data: assData } = await supabaseClient.from('assignments').select('*');
       const { data: submissionData } = await supabaseClient.from('submissions').select('*');
 
-      if (!usersData) { // Sederhana: jika users null, anggap error koneksi/policy
+      if (!usersData) {
         document.getElementById('app-root').innerHTML = `<div class="p-10 text-center text-red-600"><h1 class="text-2xl font-bold">Gagal Memuat Database</h1><p class="mt-2">Pastikan RLS Policy sudah diatur!</p></div>`;
         return;
       }
